@@ -1,11 +1,13 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_app/screens/user/user.dart';
 import 'user_home_screen.dart';
 
 class UserRegisterScreen extends StatefulWidget {
   final Function(String) onUserAdded;
 
-  UserRegisterScreen({required this.onUserAdded});
+  const UserRegisterScreen({super.key, required this.onUserAdded});
 
   @override
   _UserRegisterScreenState createState() => _UserRegisterScreenState();
@@ -16,14 +18,16 @@ class _UserRegisterScreenState extends State<UserRegisterScreen> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _confirmPasswordController = TextEditingController();
+  final TextEditingController _confirmPasswordController =
+      TextEditingController();
 
   // دالة لحفظ البيانات في متغيرات مؤقتة
   void _saveUserData(String name, String email) {
-    widget.onUserAdded(name);  // استدعاء دالة إضافة المستخدم
+    widget.onUserAdded(name); // استدعاء دالة إضافة المستخدم
   }
 
   // دالة للتسجيل
+
   Future<void> _register() async {
     if (_formKey.currentState?.validate() ?? false) {
       String name = _nameController.text.trim();
@@ -33,40 +37,54 @@ class _UserRegisterScreenState extends State<UserRegisterScreen> {
 
       if (password != confirmPassword) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Passwords do not match!')),
+          const SnackBar(content: Text('Passwords do not match!')),
         );
         return;
       }
 
       try {
-        // تسجيل المستخدم باستخدام Firebase Auth
-        UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        // Register the user with Firebase Auth
+        UserCredential userCredential =
+            await FirebaseAuth.instance.createUserWithEmailAndPassword(
           email: email,
           password: password,
         );
 
-        // حفظ البيانات في المتغيرات المؤقتة
+        String uid = userCredential.user?.uid ?? '';
+
+        // Create a user model
+        UserModel newUser = UserModel(uid: uid, name: name, email: email);
+
+        // Save the user to Firestore
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(uid)
+            .set(newUser.toMap());
+
+        // Save data locally
         _saveUserData(name, email);
 
-        // إظهار رسالة تأكيد
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('$name has been registered successfully!')),
         );
 
-        // بعد التسجيل الناجح، التوجه إلى صفحة المستخدم الرئيسية
+        // Navigate to the user home screen
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => UserHomeScreen(email: email)), // تمرير البريد الإلكتروني
+          MaterialPageRoute(builder: (context) => UserHomeScreen(email: email)),
         );
       } on FirebaseAuthException catch (e) {
-        // التعامل مع الأخطاء مثل البريد الإلكتروني المكرر أو كلمة المرور الضعيفة
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(e.message ?? 'An error occurred')),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('An unexpected error occurred')),
         );
       }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Please fill in all fields')),
+        const SnackBar(content: Text('Please fill in all fields')),
       );
     }
   }
@@ -75,7 +93,7 @@ class _UserRegisterScreenState extends State<UserRegisterScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Register User'),
+        title: const Text('Register User'),
         backgroundColor: Colors.blueAccent,
       ),
       body: Padding(
@@ -86,7 +104,7 @@ class _UserRegisterScreenState extends State<UserRegisterScreen> {
             children: [
               TextFormField(
                 controller: _nameController,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   labelText: 'Name',
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.person),
@@ -98,10 +116,10 @@ class _UserRegisterScreenState extends State<UserRegisterScreen> {
                   return null;
                 },
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               TextFormField(
                 controller: _emailController,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   labelText: 'Email',
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.email),
@@ -109,17 +127,18 @@ class _UserRegisterScreenState extends State<UserRegisterScreen> {
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Please enter your email';
-                  } else if (!RegExp(r"^[a-zA-Z0-9+_.-]+@[a-zA-Z0-9.-]+$").hasMatch(value)) {
+                  } else if (!RegExp(r"^[a-zA-Z0-9+_.-]+@[a-zA-Z0-9.-]+$")
+                      .hasMatch(value)) {
                     return 'Please enter a valid email';
                   }
                   return null;
                 },
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               TextFormField(
                 controller: _passwordController,
                 obscureText: true,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   labelText: 'Password',
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.lock),
@@ -131,11 +150,11 @@ class _UserRegisterScreenState extends State<UserRegisterScreen> {
                   return null;
                 },
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               TextFormField(
                 controller: _confirmPasswordController,
                 obscureText: true,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   labelText: 'Confirm Password',
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.lock),
@@ -147,17 +166,17 @@ class _UserRegisterScreenState extends State<UserRegisterScreen> {
                   return null;
                 },
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: _register,
-                child: Text('Register'),
                 style: ElevatedButton.styleFrom(
-                  padding: EdgeInsets.symmetric(vertical: 16),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
                   backgroundColor: Colors.blueAccent,
                 ),
+                child: const Text('Register'),
               ),
             ],
           ),

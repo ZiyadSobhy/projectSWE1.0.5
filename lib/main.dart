@@ -37,25 +37,22 @@ class FitnessApp extends StatelessWidget {
         primarySwatch: Colors.blue,
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
-      initialRoute: '/',  // تحديد شاشة البداية
+      initialRoute: '/', // تحديد شاشة البداية
       routes: {
         '/': (context) => UserOrAdminScreen(),
         '/user/login': (context) => UserLoginScreen(),
         '/user/register': (context) => UserRegisterScreen(
-          onUserAdded: (String name) {
-            // تنفيذ منطق عند إضافة المستخدم
-            print('User added: $name');
-          },
-        ),
-
+              onUserAdded: (String name) {
+                // تنفيذ منطق عند إضافة المستخدم
+                print('User added: $name');
+              },
+            ),
         '/user/profile': (context) => ProfileScreen(),
         '/user/activity': (context) => ActivityTrackingScreen(),
         '/user/progress': (context) => ProgressMonitoring(),
         '/user/goals': (context) => GoalSetting(),
-
         '/admin/login': (context) => AdminLoginScreen(),
         '/admin/dashboard': (context) => AdminDashboard(),
-        '/admin/plans': (context) => AdminWorkoutDietPlan(),
       },
     );
   }

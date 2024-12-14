@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'user_home_screen.dart';  // تأكد من استيراد صفحة الصفحة الرئيسية للمستخدم
-import 'user_register.dart';  // تأكد من استيراد شاشة التسجيل
+import 'package:cloud_firestore/cloud_firestore.dart'; // استيراد Firestore
+import 'user_home_screen.dart'; // تأكد من استيراد صفحة الصفحة الرئيسية للمستخدم
+import 'user_register.dart'; // تأكد من استيراد شاشة التسجيل
 
 class UserLoginScreen extends StatefulWidget {
   @override
@@ -19,17 +20,64 @@ class _UserLoginScreenState extends State<UserLoginScreen> {
 
     if (email.isNotEmpty && password.isNotEmpty) {
       try {
-        // محاولة تسجيل الدخول باستخدام Firebase
-        UserCredential userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
+        // Attempt login with Firebase
+        UserCredential userCredential =
+            await FirebaseAuth.instance.signInWithEmailAndPassword(
           email: email,
           password: password,
         );
 
-        // في حالة نجاح تسجيل الدخول، التوجيه إلى الصفحة الرئيسية
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => UserHomeScreen(email: email)),
-        );
+        // Get the current user UID
+        String uid = userCredential.user?.uid ?? '';
+
+        // Fetch user data from Firestore
+        DocumentSnapshot userDoc =
+            await FirebaseFirestore.instance.collection('users').doc(uid).get();
+
+        if (userDoc.exists) {
+          // Fetch the tasks assigned to the logged-in user
+          QuerySnapshot taskSnapshot = await FirebaseFirestore.instance
+              .collection('tasks')
+              .where('assignedUserId',
+                  isEqualTo:
+                      uid) // Assuming the tasks are assigned using 'assignedUserId'
+              .get();
+
+          if (taskSnapshot.docs.isNotEmpty) {
+            // Handle the tasks (e.g., pass them to the home screen or process them)
+            List tasks = taskSnapshot.docs.map((doc) => doc.data()).toList();
+            // You can pass the tasks to the home screen or another part of your app
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => UserHomeScreen(
+                  email: email,
+                ),
+              ),
+            );
+          } else {
+            // Handle case where no tasks are assigned
+            showDialog(
+              context: context,
+              builder: (context) {
+                return AlertDialog(
+                  title: Text('No Tasks Assigned'),
+                  content: Text('You have no tasks assigned at the moment.'),
+                  actions: [
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                      },
+                      child: Text('OK'),
+                    ),
+                  ],
+                );
+              },
+            );
+          }
+        } else {
+          throw Exception('User data not found in Firestore');
+        }
       } on FirebaseAuthException catch (e) {
         String message = 'Login failed';
         if (e.code == 'user-not-found') {
@@ -38,7 +86,7 @@ class _UserLoginScreenState extends State<UserLoginScreen> {
           message = 'Wrong password provided for that user';
         }
 
-        // عرض رسالة الخطأ
+        // Show error dialog
         showDialog(
           context: context,
           builder: (context) {
@@ -56,9 +104,28 @@ class _UserLoginScreenState extends State<UserLoginScreen> {
             );
           },
         );
+      } catch (e) {
+        // Handle other errors
+        showDialog(
+          context: context,
+          builder: (context) {
+            return AlertDialog(
+              title: Text('Error'),
+              content: Text('An unexpected error occurred'),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                  child: Text('OK'),
+                ),
+              ],
+            );
+          },
+        );
       }
     } else {
-      // إذا كانت الحقول فارغة، عرض رسالة تحذير
+      // Show warning if fields are empty
       showDialog(
         context: context,
         builder: (context) {
