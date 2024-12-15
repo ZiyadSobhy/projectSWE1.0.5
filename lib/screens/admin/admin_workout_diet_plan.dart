@@ -1,40 +1,101 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; // Firestore package
+import '../user/user.dart';
 
 class AdminWorkoutDietPlan extends StatefulWidget {
+  final UserModel user; // UserModel passed via constructor
+
+  AdminWorkoutDietPlan({required this.user});
+
   @override
   _AdminWorkoutDietPlanState createState() => _AdminWorkoutDietPlanState();
 }
 
 class _AdminWorkoutDietPlanState extends State<AdminWorkoutDietPlan> {
   final TextEditingController _taskController = TextEditingController();
-  final List<String> _tasks = []; // قائمة لحفظ المهام
+  late List<Task> _tasks; // List of tasks specific to the user
 
-  void _addTask() {
-    String task = _taskController.text.trim();
-    if (task.isNotEmpty) {
-      setState(() {
-        _tasks.add(task); // إضافة المهمة إلى القائمة
-        _taskController.clear(); // تنظيف حقل الإدخال بعد الإضافة
-      });
+  @override
+  void initState() {
+    super.initState();
+    _tasks = widget.user.tasks; // Initialize tasks from the passed UserModel
+  }
+
+  // Add task to Firebase and update UserModel's task list
+  void _addTask() async {
+    String taskTitle = _taskController.text.trim();
+    if (taskTitle.isNotEmpty) {
+      // Create new task
+      Task newTask = Task(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        title: taskTitle,
+        description: 'Description of the task', // Optional description
+      );
+
+      // Update Firestore (for the user)
+      try {
+        // Add the task to Firebase under the user's document
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(widget.user.uid)
+            .update({
+          'tasks': FieldValue.arrayUnion([newTask.toMap()]),
+        });
+
+        // Add task locally to the user model
+        setState(() {
+          _tasks.add(newTask);
+          _taskController.clear(); // Clear the input field after adding
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Task added successfully!')),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error adding task: $e')),
+        );
+      }
     } else {
-      // عرض رسالة تنبيه إذا كان الحقل فارغًا
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Please enter a task')),
       );
     }
   }
 
-  void _deleteTask(int index) {
-    setState(() {
-      _tasks.removeAt(index); // حذف المهمة من القائمة
-    });
+  // Delete task from Firebase and update UserModel's task list
+  void _deleteTask(int index) async {
+    Task taskToDelete = _tasks[index];
+
+    try {
+      // Remove task from Firestore
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(widget.user.uid)
+          .update({
+        'tasks': FieldValue.arrayRemove([taskToDelete.toMap()]),
+      });
+
+      // Remove task locally
+      setState(() {
+        _tasks.removeAt(index);
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Task removed successfully!')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error removing task: $e')),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Workout & Diet Plans'),
+        title: Text('${widget.user.name}\'s Workout & Diet Plans'),
         backgroundColor: Colors.teal,
       ),
       body: Padding(
@@ -85,52 +146,52 @@ class _AdminWorkoutDietPlanState extends State<AdminWorkoutDietPlan> {
             Expanded(
               child: _tasks.isEmpty
                   ? Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.task_alt_outlined,
-                      size: 50,
-                      color: Colors.grey,
-                    ),
-                    SizedBox(height: 10),
-                    Text(
-                      'No tasks added yet!',
-                      style:
-                      TextStyle(fontSize: 16, color: Colors.grey[600]),
-                    ),
-                  ],
-                ),
-              )
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.task_alt_outlined,
+                            size: 50,
+                            color: Colors.grey,
+                          ),
+                          SizedBox(height: 10),
+                          Text(
+                            'No tasks added yet!',
+                            style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                          ),
+                        ],
+                      ),
+                    )
                   : ListView.builder(
-                itemCount: _tasks.length,
-                itemBuilder: (context, index) {
-                  return Card(
-                    elevation: 3,
-                    margin: EdgeInsets.symmetric(vertical: 8),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
+                      itemCount: _tasks.length,
+                      itemBuilder: (context, index) {
+                        Task task = _tasks[index];
+                        return Card(
+                          elevation: 3,
+                          margin: EdgeInsets.symmetric(vertical: 8),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: ListTile(
+                            leading: CircleAvatar(
+                              backgroundColor: Colors.teal,
+                              child: Icon(
+                                Icons.check,
+                                color: Colors.white,
+                              ),
+                            ),
+                            title: Text(
+                              task.title,
+                              style: TextStyle(fontSize: 16),
+                            ),
+                            trailing: IconButton(
+                              icon: Icon(Icons.delete, color: Colors.red),
+                              onPressed: () => _deleteTask(index),
+                            ),
+                          ),
+                        );
+                      },
                     ),
-                    child: ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: Colors.teal,
-                        child: Icon(
-                          Icons.check,
-                          color: Colors.white,
-                        ),
-                      ),
-                      title: Text(
-                        _tasks[index],
-                        style: TextStyle(fontSize: 16),
-                      ),
-                      trailing: IconButton(
-                        icon: Icon(Icons.delete, color: Colors.red),
-                        onPressed: () => _deleteTask(index),
-                      ),
-                    ),
-                  );
-                },
-              ),
             ),
           ],
         ),

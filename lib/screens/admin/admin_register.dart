@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'admin.dart'; // Import the Admin model
 import 'admin_dashboard.dart'; // تأكد من استيراد شاشة لوحة تحكم الإدمن
 
 class AdminRegisterScreen extends StatefulWidget {
@@ -10,6 +12,7 @@ class AdminRegisterScreen extends StatefulWidget {
 class _AdminRegisterScreenState extends State<AdminRegisterScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _nameController = TextEditingController(); // Add a field for name
   final _codeController = TextEditingController();
   final String adminCode = "admin12345"; // الكود الثابت
 
@@ -17,6 +20,7 @@ class _AdminRegisterScreenState extends State<AdminRegisterScreen> {
   Future<void> _register() async {
     String email = _emailController.text.trim();
     String password = _passwordController.text.trim();
+    String name = _nameController.text.trim(); // Get the name input
     String code = _codeController.text.trim();
 
     if (code == adminCode) {
@@ -26,6 +30,17 @@ class _AdminRegisterScreenState extends State<AdminRegisterScreen> {
           email: email,
           password: password,
         );
+
+        // بعد تسجيل الدخول بنجاح، يتم إنشاء كائن الإدمن وحفظه في Firestore
+        Admin admin = Admin(
+          id: userCredential.user!.uid,
+          name: name,
+          email: email,
+          associatedTrainees: [], // Initialize with an empty list of associated trainees
+        );
+
+        // Save admin to Firestore
+        await admin.saveToFirestore();
 
         // في حالة نجاح التسجيل، التوجيه إلى لوحة التحكم
         Navigator.pushReplacement(
@@ -103,6 +118,18 @@ class _AdminRegisterScreenState extends State<AdminRegisterScreen> {
                 textAlign: TextAlign.center,
               ),
               SizedBox(height: 30),
+              // حقل الاسم (الجديد)
+              TextField(
+                controller: _nameController,
+                decoration: InputDecoration(
+                  labelText: 'Name',
+                  prefixIcon: Icon(Icons.person),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+              SizedBox(height: 20),
               // حقل البريد الإلكتروني
               TextField(
                 controller: _emailController,

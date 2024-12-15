@@ -33,30 +33,8 @@ class AdminDashboard extends StatelessWidget {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => AdminWorkoutDietPlan()),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                padding: EdgeInsets.symmetric(vertical: 15),
-                backgroundColor: Colors.teal,
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Workout & Diet Plans',
-                    style: TextStyle(fontSize: 18),
-                  ),
-                  Icon(Icons.fitness_center, color: Colors.white),
-                ],
-              ),
-            ),
-            SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => AdminUserManagement()),
+                  MaterialPageRoute(
+                      builder: (context) => AdminUserManagement()),
                 );
               },
               style: ElevatedButton.styleFrom(
